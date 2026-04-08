@@ -165,10 +165,10 @@ fn read_and_sort_directory(path: &Path, base: &Path) -> Result<Vec<String>> {
 
     for entry in fs::read_dir(path)? {
         let entry = entry?;
-        let path = entry.path();
-        let file_name_str = path
+        let file_path = entry.path();
+        let file_name_str = file_path
             .strip_prefix(base)
-            .unwrap_or(&path)
+            .unwrap_or(&file_path)
             .as_os_str()
             .to_string_lossy()
             .to_string();
