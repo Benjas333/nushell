@@ -167,7 +167,18 @@ fn read_and_sort_directory(path: &Path) -> Result<Vec<String>> {
         let entry = entry?;
         let file_name = entry.file_name();
         let file_name_str = file_name.into_string().unwrap_or_default();
-        entries.push(file_name_str);
+        let file_type = entry.file_type()?;
+
+        if !file_type.is_dir() {
+            entries.push(file_name_str);
+            continue;
+        }
+
+        let mut sub_entries = read_and_sort_directory(&entry.path())?
+            .iter()
+            .map(|e| format!("{file_name_str}/{e}"))
+            .collect::<Vec<String>>();
+        entries.append(&mut sub_entries);
     }
 
     entries.sort();
