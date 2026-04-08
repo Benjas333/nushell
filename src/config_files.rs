@@ -160,13 +160,18 @@ pub(crate) fn read_default_env_file(engine_state: &mut EngineState, stack: &mut 
 /// Get files sorted lexicographically
 ///
 /// uses `impl Ord for String`
-fn read_and_sort_directory(path: &Path) -> Result<Vec<String>> {
+fn read_and_sort_directory(path: &Path, base: &Path) -> Result<Vec<String>> {
     let mut entries = Vec::new();
 
     for entry in fs::read_dir(path)? {
         let entry = entry?;
-        let file_name = entry.file_name();
-        let file_name_str = file_name.into_string().unwrap_or_default();
+        let path = entry.path();
+        let file_name_str = path
+            .strip_prefix(base)
+            .unwrap_or(&path)
+            .as_os_str()
+            .to_string_lossy()
+            .to_string();
         let file_type = entry.file_type()?;
 
         if !file_type.is_dir() {
@@ -174,10 +179,7 @@ fn read_and_sort_directory(path: &Path) -> Result<Vec<String>> {
             continue;
         }
 
-        let mut sub_entries = read_and_sort_directory(&entry.path())?
-            .iter()
-            .map(|e| format!("{file_name_str}/{e}"))
-            .collect::<Vec<String>>();
+        let mut sub_entries = read_and_sort_directory(&entry.path(), base)?;
         entries.append(&mut sub_entries);
     }
 
@@ -206,7 +208,7 @@ pub(crate) fn read_vendor_autoload_files(engine_state: &mut EngineState, stack: 
 
             if autoload_dir.exists() {
                 // on a second levels files are lexicographically sorted by the string of the filename
-                let entries = read_and_sort_directory(autoload_dir);
+                let entries = read_and_sort_directory(autoload_dir, autoload_dir);
                 if let Ok(entries) = entries {
                     for entry in entries {
                         if !entry.ends_with(".nu") {
